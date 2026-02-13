@@ -480,10 +480,12 @@ packages:
   vector_desk_flutter:
     dependency: "direct main"
     description:
-      path: ".."
-      relative: true
-    source: path
-    version: "0.0.2"
+      path: "."
+      ref: HEAD
+      resolved-ref: d7b86fe3352dc279e54908f03e219282d87271ca
+      url: "https://github.com/xunqun/vectordesk_client_flutter.git"
+    source: git
+    version: "0.0.3"
   vector_math:
     dependency: transitive
     description:
