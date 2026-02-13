@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/intl.dart';
-import 'vector_desk_client.dart';
+import 'vectordesk_client.dart';
 import 'models.dart';
 
 class VectorDeskChatWidget extends StatefulWidget {

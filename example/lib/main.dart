@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:vector_desk_flutter/vector_desk_flutter.dart';
+import 'package:vectordesk_flutter/vectordesk_flutter.dart';
 import 'firebase_options.dart';
 
 void main() async {

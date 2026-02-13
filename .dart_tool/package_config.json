@@ -386,7 +386,7 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "vector_desk_flutter",
+      "name": "vectordesk_flutter",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.2"

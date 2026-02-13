@@ -9,8 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  vector_desk_flutter:
-    git: https://github.com/xunqun/vectordesk_client_flutter.git
+  vectordesk_flutter:
+    git: https://github.com/xunqun/vectordesk_flutter.git
   firebase_core: ^3.7.0
 
 dev_dependencies:
