@@ -11,10 +11,10 @@ A Flutter client SDK for integrating VectorDesk AI chat into your application.
 
 ## Installation
 
-Add `vectordesk_client_flutter` to your `pubspec.yaml`:
+Add `vectordesk_flutter` to your `pubspec.yaml`:
 
 ```sh
-flutter pub add vectordesk_client_flutter
+flutter pub add vectordesk_flutter
 ```
 
 ## Usage
@@ -41,7 +41,7 @@ void main() async {
 Use `VectorDeskChatWidget` anywhere in your app. You can find your `orgId` and `personaId` in the VectorDesk console.
 
 ```dart
-import 'package:vectordesk_client_flutter/vectordesk_client_flutter.dart';
+import 'package:vectordesk_flutter/vectordesk_flutter.dart';
 
 class ChatScreen extends StatelessWidget {
   @override
