@@ -110,11 +110,14 @@ class VectorDeskClient {
     final newChatId = 'guest_${const Uuid().v4()}';
     await _firestore!.collection('chats').doc(newChatId).set({
       'orgId': orgId,
-      'userId': _userId,
+      'userId': _userId, // Kept for legacy/internal SDK use
+      'externalUserId': _userId, // CRITICAL: Required by Chat model & RAG
       'status': 'active',
       'channel': 'flutter_app', // Important
+      'integrationId': 'flutter_app', // Consistent with channel
       'createdAt': FieldValue.serverTimestamp(),
       'lastMessageAt': FieldValue.serverTimestamp(),
+      'unreadCount': 0, // Initialize unread count
       if (personaId != null) 'agentPersonaId': personaId,
     });
     return newChatId;

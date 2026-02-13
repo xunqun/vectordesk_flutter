@@ -27,9 +27,8 @@ class MyApp extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(title: const Text('VectorDesk SDK Example')),
         body: const VectorDeskChatWidget(
-          orgId: 'ai-agent-1ce5e', // Use the prod org ID for testing
-          // personaId: '...', // Optional
-          themeColor: Colors.teal,
+          orgId: 'BKHmv6uGFlPoqPgOboa9',
+          personaId: 'gWF3A6hEPQt57WW185zn',
         ),
       ),
     );

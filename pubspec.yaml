@@ -1,6 +1,6 @@
 name: vector_desk_flutter
 description: A Flutter client SDK for integrating VectorDesk AI chat.
-version: 0.0.2
+version: 0.0.3
 homepage: https://github.com/xunqun/vector_desk_flutter_client
 
 environment:
