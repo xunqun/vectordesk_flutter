@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import 'models.dart';
+import 'vectordesk_firebase_options.dart';
 
 class VectorDeskClient {
   final String orgId;
@@ -16,14 +17,17 @@ class VectorDeskClient {
   VectorDeskClient({required this.orgId, this.personaId});
 
   Future<void> initialize({FirebaseOptions? options, String? appName}) async {
-    if (appName != null && options != null) {
-      try {
-        _app = Firebase.app(appName);
-      } catch (e) {
-        _app = await Firebase.initializeApp(name: appName, options: options);
-      }
-    } else {
-      _app = Firebase.app(); // Use default
+    // Default to 'vectordesk' app name if not provided, to isolate from host app
+    final name = appName ?? 'vectordesk';
+
+    // Default to embedded options if not provided
+    final opts = options ?? VectorDeskFirebaseOptions.currentPlatform;
+
+    try {
+      _app = Firebase.app(name);
+    } catch (e) {
+      // App not initialized yet, initialize it
+      _app = await Firebase.initializeApp(name: name, options: opts);
     }
 
     _auth = FirebaseAuth.instanceFor(app: _app!);
