@@ -122,7 +122,8 @@ class VectorDeskClient {
       'createdAt': FieldValue.serverTimestamp(),
       'lastMessageAt': FieldValue.serverTimestamp(),
       'unreadCount': 0, // Initialize unread count
-      if (personaId != null) 'agentPersonaId': personaId,
+      'humanTakeover': false,
+      if (personaId != null) 'personaId': personaId,
     });
     return newChatId;
   }
