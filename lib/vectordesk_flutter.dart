@@ -1,4 +1,4 @@
-library vectordesk_flutter;
+library;
 
 export 'src/vectordesk_client.dart';
 export 'src/vectordesk_chat_widget.dart';
