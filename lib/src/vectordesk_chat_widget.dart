@@ -42,6 +42,21 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
     _initClient();
   }
 
+  @override
+  void didUpdateWidget(covariant VectorDeskChatWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.orgId != widget.orgId ||
+        oldWidget.personaId != widget.personaId ||
+        oldWidget.firebaseOptions != widget.firebaseOptions ||
+        oldWidget.appName != widget.appName) {
+      _client = VectorDeskClient(
+        orgId: widget.orgId,
+        personaId: widget.personaId,
+      );
+      _initClient();
+    }
+  }
+
   Future<void> _initClient() async {
     // In a real app, options might be passed or default used
     await _client.initialize(

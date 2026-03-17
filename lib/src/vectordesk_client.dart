@@ -107,7 +107,12 @@ class VectorDeskClient {
         .get();
 
     if (q.docs.isNotEmpty) {
-      return q.docs.first.id;
+      final doc = q.docs.first;
+      // Update personaId if it has changed
+      if (personaId != null && doc.data()['personaId'] != personaId) {
+        await doc.reference.update({'personaId': personaId});
+      }
+      return doc.id;
     }
 
     // Create new
