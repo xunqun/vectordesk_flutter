@@ -15,6 +15,7 @@ class VectorDeskChatWidget extends StatefulWidget {
   final Color themeColor;
   final FirebaseOptions? firebaseOptions;
   final String? appName;
+  final Brightness? brightness;
 
   const VectorDeskChatWidget({
     super.key,
@@ -25,6 +26,7 @@ class VectorDeskChatWidget extends StatefulWidget {
     this.themeColor = Colors.blue,
     this.firebaseOptions,
     this.appName,
+    this.brightness,
   });
 
   @override
@@ -38,6 +40,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
   StreamSubscription<List<VectorDeskMessage>>? _messagesSubscription;
   bool _isThinking = false;
   bool _initialized = false;
+
+  bool get _isDark =>
+      (widget.brightness ?? Theme.of(context).brightness) == Brightness.dark;
 
   @override
   void initState() {
@@ -186,7 +191,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('Thinking...', style: TextStyle(color: Colors.grey[600])),
+                Text('Thinking...',
+                    style: TextStyle(
+                        color: _isDark ? Colors.white54 : Colors.grey[600])),
               ],
             ),
           ),
@@ -239,9 +246,11 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                         side: BorderSide(
                             color: widget.themeColor.withValues(alpha: 0.3)),
                       ),
-                      backgroundColor:
-                          widget.themeColor.withValues(alpha: 0.05),
-                      labelStyle: TextStyle(color: widget.themeColor),
+                      backgroundColor: _isDark
+                          ? widget.themeColor.withValues(alpha: 0.15)
+                          : widget.themeColor.withValues(alpha: 0.05),
+                      labelStyle: TextStyle(
+                          color: _isDark ? Colors.white : widget.themeColor),
                     ),
                   );
                 }).toList(),
@@ -263,7 +272,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
         decoration: BoxDecoration(
           color: isUser
               ? widget.themeColor
-              : widget.themeColor.withValues(alpha: 0.08),
+              : _isDark
+                  ? widget.themeColor.withValues(alpha: 0.15)
+                  : widget.themeColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
@@ -272,7 +283,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: _isDark
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.03),
               offset: const Offset(0, 2),
               blurRadius: 10,
             ),
@@ -287,7 +300,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               data: msg.text,
               styleSheet: MarkdownStyleSheet(
                 p: TextStyle(
-                  color: isUser ? Colors.white : Colors.black87,
+                  color: isUser
+                      ? Colors.white
+                      : (_isDark ? Colors.white : Colors.black87),
                   fontSize: 15,
                   height: 1.4,
                 ),
@@ -299,14 +314,20 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                 code: TextStyle(
                   backgroundColor: isUser
                       ? Colors.white24
-                      : Colors.grey.withValues(alpha: 0.1),
-                  color: isUser ? Colors.white : Colors.black87,
+                      : (_isDark
+                          ? Colors.grey.withValues(alpha: 0.3)
+                          : Colors.grey.withValues(alpha: 0.1)),
+                  color: isUser
+                      ? Colors.white
+                      : (_isDark ? Colors.white : Colors.black87),
                   fontFamily: 'monospace',
                 ),
                 codeblockDecoration: BoxDecoration(
                   color: isUser
                       ? Colors.white24
-                      : Colors.grey.withValues(alpha: 0.1),
+                      : (_isDark
+                          ? Colors.grey.withValues(alpha: 0.3)
+                          : Colors.grey.withValues(alpha: 0.1)),
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
@@ -316,7 +337,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               DateFormat('HH:mm').format(msg.createdAt),
               style: TextStyle(
                 fontSize: 10,
-                color: isUser ? Colors.white70 : Colors.black54,
+                color: isUser
+                    ? Colors.white70
+                    : (_isDark ? Colors.white54 : Colors.black54),
               ),
             ),
           ],
@@ -329,10 +352,12 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _isDark ? const Color(0xFF1E1E1E) : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: _isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -1),
             blurRadius: 5,
           ),
@@ -344,10 +369,16 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             Expanded(
               child: TextField(
                 controller: _controller,
-                decoration: const InputDecoration(
+                style: TextStyle(
+                  color: _isDark ? Colors.white : Colors.black,
+                ),
+                decoration: InputDecoration(
                   hintText: '輸入問題...',
+                  hintStyle: TextStyle(
+                    color: _isDark ? Colors.white54 : Colors.black54,
+                  ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 onSubmitted: (_) => _sendMessage(),
               ),
