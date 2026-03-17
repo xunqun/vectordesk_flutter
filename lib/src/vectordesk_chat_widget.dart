@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,6 +10,8 @@ import 'models.dart';
 class VectorDeskChatWidget extends StatefulWidget {
   final String orgId;
   final String? personaId;
+  final String? greetingMessage;
+  final List<String>? quickReplies;
   final Color themeColor;
   final FirebaseOptions? firebaseOptions;
   final String? appName;
@@ -16,6 +20,8 @@ class VectorDeskChatWidget extends StatefulWidget {
     super.key,
     required this.orgId,
     this.personaId,
+    this.greetingMessage,
+    this.quickReplies,
     this.themeColor = Colors.blue,
     this.firebaseOptions,
     this.appName,
@@ -29,7 +35,8 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
   late final VectorDeskClient _client;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  Stream<List<VectorDeskMessage>>? _messagesStream;
+  StreamSubscription<List<VectorDeskMessage>>? _messagesSubscription;
+  bool _isThinking = false;
   bool _initialized = false;
 
   @override
@@ -57,6 +64,14 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
     }
   }
 
+  @override
+  void dispose() {
+    _messagesSubscription?.cancel();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _initClient() async {
     // In a real app, options might be passed or default used
     await _client.initialize(
@@ -64,15 +79,48 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
     if (mounted) {
       setState(() {
         _initialized = true;
-        _messagesStream = _client.chatStream;
+        // Cancel previous subscription if any
+        _messagesSubscription?.cancel();
+        _messagesSubscription = _client.chatStream.listen((messages) {
+          if (mounted) {
+            setState(() {
+              // If we just received messages and the latest one is from the bot, stop thinking
+              if (messages.isNotEmpty) {
+                final latestMessage = messages.first;
+                if (latestMessage.sender != 'user') {
+                  _isThinking = false;
+                }
+              }
+            });
+          }
+        });
       });
     }
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
-    _client.sendMessage(_controller.text.trim());
+
+    final String messageText = _controller.text.trim();
     _controller.clear();
+
+    setState(() {
+      _isThinking = true;
+    });
+
+    try {
+      await _client.sendMessage(messageText);
+    } catch (e) {
+      setState(() {
+        _isThinking = false; // Stop thinking on error
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Send failed: $e')),
+        );
+      }
+    }
+
     // Scroll to bottom
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
@@ -95,7 +143,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
       children: [
         Expanded(
           child: StreamBuilder<List<VectorDeskMessage>>(
-            stream: _messagesStream,
+            stream: _client.chatStream, // Use _client.chatStream directly
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}'));
@@ -106,7 +154,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
 
               final messages = snapshot.data!;
               if (messages.isEmpty) {
-                return const Center(child: Text('Start a conversation'));
+                return _buildEmptyState();
               }
 
               return ListView.builder(
@@ -122,8 +170,86 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             },
           ),
         ),
+        if (_isThinking)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(widget.themeColor),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('Thinking...', style: TextStyle(color: Colors.grey[600])),
+              ],
+            ),
+          ),
         _buildInputArea(),
       ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.greetingMessage != null)
+            _buildMessageBubble(
+              VectorDeskMessage(
+                id: 'greeting',
+                text: widget.greetingMessage!,
+                sender: 'agent',
+                createdAt: DateTime.now(),
+              ),
+            ),
+          if (widget.greetingMessage == null)
+            _buildMessageBubble(
+              VectorDeskMessage(
+                id: 'greeting_default',
+                text: 'Hello! How can I help you today?',
+                sender: 'agent',
+                createdAt: DateTime.now(),
+              ),
+            ),
+          if (widget.quickReplies != null &&
+              widget.quickReplies!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: widget.quickReplies!.map((reply) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ActionChip(
+                      label: Text(reply),
+                      onPressed: () {
+                        _controller.text = reply;
+                        _sendMessage();
+                      },
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                            color: widget.themeColor.withValues(alpha: 0.3)),
+                      ),
+                      backgroundColor:
+                          widget.themeColor.withValues(alpha: 0.05),
+                      labelStyle: TextStyle(color: widget.themeColor),
+                    ),
+                  );
+                }).toList(),
+              ),
+            )
+          ]
+        ],
+      ),
     );
   }
 
@@ -133,15 +259,24 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isUser ? widget.themeColor : Colors.white70,
+          color: isUser
+              ? widget.themeColor
+              : widget.themeColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isUser ? const Radius.circular(16) : Radius.zero,
-            bottomRight: isUser ? Radius.zero : const Radius.circular(16),
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: isUser ? const Radius.circular(20) : Radius.zero,
+            bottomRight: isUser ? Radius.zero : const Radius.circular(20),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              offset: const Offset(0, 2),
+              blurRadius: 10,
+            ),
+          ],
         ),
         constraints:
             BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
@@ -153,19 +288,30 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               styleSheet: MarkdownStyleSheet(
                 p: TextStyle(
                   color: isUser ? Colors.white : Colors.black87,
+                  fontSize: 15,
+                  height: 1.4,
                 ),
                 a: TextStyle(
-                  color: isUser ? Colors.white : Colors.blue,
+                  color: isUser ? Colors.white : widget.themeColor,
                   decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.w600,
                 ),
                 code: TextStyle(
-                  backgroundColor:
-                      isUser ? Colors.white24 : Colors.grey.shade300,
+                  backgroundColor: isUser
+                      ? Colors.white24
+                      : Colors.grey.withValues(alpha: 0.1),
                   color: isUser ? Colors.white : Colors.black87,
+                  fontFamily: 'monospace',
+                ),
+                codeblockDecoration: BoxDecoration(
+                  color: isUser
+                      ? Colors.white24
+                      : Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               DateFormat('HH:mm').format(msg.createdAt),
               style: TextStyle(
@@ -199,7 +345,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               child: TextField(
                 controller: _controller,
                 decoration: const InputDecoration(
-                  hintText: 'Type a message...',
+                  hintText: '輸入問題...',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16),
                 ),
