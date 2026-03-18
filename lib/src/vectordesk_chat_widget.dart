@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'vectordesk_client.dart';
 import 'models.dart';
 
@@ -108,6 +109,8 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
 
     final String messageText = _controller.text.trim();
     _controller.clear();
+    // 收合鍵盤
+    FocusScope.of(context).unfocus();
 
     setState(() {
       _isThinking = true;
@@ -165,6 +168,8 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               return ListView.builder(
                 controller: _scrollController,
                 reverse: true, // Start from bottom
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.all(16),
                 itemCount: messages.length,
                 itemBuilder: (context, index) {
@@ -298,6 +303,16 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
           children: [
             MarkdownBody(
               data: msg.text,
+              selectable: true,
+              onTapLink: (text, href, title) async {
+                if (href != null && await canLaunchUrlString(href)) {
+                  await launchUrlString(href);
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('無法開啟連結：$href')),
+                  );
+                }
+              },
               styleSheet: MarkdownStyleSheet(
                 p: TextStyle(
                   color: isUser

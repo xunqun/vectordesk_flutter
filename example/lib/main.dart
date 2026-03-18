@@ -12,7 +12,7 @@ void main() async {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
   } catch (e) {
-    print('Firebase init error (expected if no options): $e');
+    debugPrint('Firebase init error (expected if no options): $e');
   }
 
   runApp(const MyApp());
