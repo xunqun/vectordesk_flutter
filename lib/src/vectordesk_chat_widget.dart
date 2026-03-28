@@ -267,6 +267,40 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
     );
   }
 
+  void _openFullscreenImage(BuildContext context, String url) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black87,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.error, color: Colors.white);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(VectorDeskMessage msg) {
     final isUser = msg.sender == 'user';
     return Align(
@@ -301,7 +335,62 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MarkdownBody(
+            // Render image attachments
+            ...msg.attachments
+                .where((a) =>
+                    a.type == 'image' &&
+                    a.url.isNotEmpty &&
+                    a.url != '[已過期]')
+                .map((a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: GestureDetector(
+                        onTap: () => _openFullscreenImage(context, a.url),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 250),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              a.url,
+                              fit: BoxFit.contain,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Center(child: Icon(Icons.error)),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    )),
+            // Expired image placeholder
+            if (msg.attachments.any((a) => a.url == '[已過期]'))
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 8.0),
+                decoration: BoxDecoration(
+                  color: _isDark ? Colors.white10 : Colors.black12,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '[圖片已過期]',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _isDark ? Colors.white38 : Colors.grey,
+                  ),
+                ),
+              ),
+            if (msg.text.isNotEmpty && msg.text != '[圖片訊息]')
+              MarkdownBody(
               data: msg.text,
               selectable: true,
               onTapLink: (text, href, title) async {
