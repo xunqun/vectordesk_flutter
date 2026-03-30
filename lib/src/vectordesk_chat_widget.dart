@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'vectordesk_client.dart';
 import 'models.dart';
+import 'localization.dart';
 
 class VectorDeskChatWidget extends StatefulWidget {
   final String orgId;
@@ -17,6 +18,7 @@ class VectorDeskChatWidget extends StatefulWidget {
   final FirebaseOptions? firebaseOptions;
   final String? appName;
   final Brightness? brightness;
+  final VectorDeskChatTranslations? translations;
 
   const VectorDeskChatWidget({
     super.key,
@@ -28,6 +30,7 @@ class VectorDeskChatWidget extends StatefulWidget {
     this.firebaseOptions,
     this.appName,
     this.brightness,
+    this.translations,
   });
 
   @override
@@ -44,6 +47,9 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
 
   bool get _isDark =>
       (widget.brightness ?? Theme.of(context).brightness) == Brightness.dark;
+
+  VectorDeskChatTranslations get _l10n =>
+      widget.translations ?? const VectorDeskChatDefaultTranslations();
 
   @override
   void initState() {
@@ -124,7 +130,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Send failed: $e')),
+          SnackBar(content: Text(_l10n.sendFailed(e.toString()))),
         );
       }
     }
@@ -154,7 +160,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             stream: _client.chatStream, // Use _client.chatStream directly
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return Center(child: Text(_l10n.errorMessage(snapshot.error.toString())));
               }
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
@@ -196,7 +202,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('Thinking...',
+                Text(_l10n.thinking,
                     style: TextStyle(
                         color: _isDark ? Colors.white54 : Colors.grey[600])),
               ],
@@ -226,7 +232,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             _buildMessageBubble(
               VectorDeskMessage(
                 id: 'greeting_default',
-                text: 'Hello! How can I help you today?',
+                text: _l10n.defaultGreeting,
                 sender: 'agent',
                 createdAt: DateTime.now(),
               ),
@@ -382,7 +388,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '[圖片已過期]',
+                  _l10n.imageExpired,
                   style: TextStyle(
                     fontSize: 12,
                     color: _isDark ? Colors.white38 : Colors.grey,
@@ -398,7 +404,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                   await launchUrlString(href);
                 } else if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('無法開啟連結：$href')),
+                    SnackBar(content: Text(_l10n.linkOpenFailed(href ?? ''))),
                   );
                 }
               },
@@ -477,7 +483,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                   color: _isDark ? Colors.white : Colors.black,
                 ),
                 decoration: InputDecoration(
-                  hintText: '輸入問題...',
+                  hintText: _l10n.inputHint,
                   hintStyle: TextStyle(
                     color: _isDark ? Colors.white54 : Colors.black54,
                   ),
