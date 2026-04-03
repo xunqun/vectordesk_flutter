@@ -479,6 +479,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             Expanded(
               child: TextField(
                 controller: _controller,
+                maxLength: 2000,
                 style: TextStyle(
                   color: _isDark ? Colors.white : Colors.black,
                 ),
@@ -489,6 +490,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  counterText: "", // Hide the counter
                 ),
                 onSubmitted: (_) => _sendMessage(),
               ),

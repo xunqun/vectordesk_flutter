@@ -149,6 +149,11 @@ class VectorDeskClient {
   }
 
   Future<void> sendMessage(String text) async {
+    if (text.length > 2050) {
+      // ignore: avoid_print
+      print('[VectorDeskClient] Truncating overly long message');
+      text = text.substring(0, 2050);
+    }
     final chatId = await _getOrCreateChatId();
     await _firestore!
         .collection('chats')
