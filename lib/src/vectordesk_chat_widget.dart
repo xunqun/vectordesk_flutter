@@ -160,7 +160,8 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             stream: _client.chatStream, // Use _client.chatStream directly
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text(_l10n.errorMessage(snapshot.error.toString())));
+                return Center(
+                    child: Text(_l10n.errorMessage(snapshot.error.toString())));
               }
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
@@ -344,9 +345,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
             // Render image attachments
             ...msg.attachments
                 .where((a) =>
-                    a.type == 'image' &&
-                    a.url.isNotEmpty &&
-                    a.url != '[已過期]')
+                    a.type == 'image' && a.url.isNotEmpty && a.url != '[已過期]')
                 .map((a) => Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: GestureDetector(
@@ -397,51 +396,51 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               ),
             if (msg.text.isNotEmpty && msg.text != '[圖片訊息]')
               MarkdownBody(
-              data: msg.text,
-              selectable: true,
-              onTapLink: (text, href, title) async {
-                if (href != null && await canLaunchUrlString(href)) {
-                  await launchUrlString(href);
-                } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(_l10n.linkOpenFailed(href ?? ''))),
-                  );
-                }
-              },
-              styleSheet: MarkdownStyleSheet(
-                p: TextStyle(
-                  color: isUser
-                      ? Colors.white
-                      : (_isDark ? Colors.white : Colors.black87),
-                  fontSize: 15,
-                  height: 1.4,
-                ),
-                a: TextStyle(
-                  color: isUser ? Colors.white : widget.themeColor,
-                  decoration: TextDecoration.underline,
-                  fontWeight: FontWeight.w600,
-                ),
-                code: TextStyle(
-                  backgroundColor: isUser
-                      ? Colors.white24
-                      : (_isDark
-                          ? Colors.grey.withValues(alpha: 0.3)
-                          : Colors.grey.withValues(alpha: 0.1)),
-                  color: isUser
-                      ? Colors.white
-                      : (_isDark ? Colors.white : Colors.black87),
-                  fontFamily: 'monospace',
-                ),
-                codeblockDecoration: BoxDecoration(
-                  color: isUser
-                      ? Colors.white24
-                      : (_isDark
-                          ? Colors.grey.withValues(alpha: 0.3)
-                          : Colors.grey.withValues(alpha: 0.1)),
-                  borderRadius: BorderRadius.circular(8),
+                data: msg.text,
+                selectable: true,
+                onTapLink: (text, href, title) async {
+                  if (href != null && await canLaunchUrlString(href)) {
+                    await launchUrlString(href);
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(_l10n.linkOpenFailed(href ?? ''))),
+                    );
+                  }
+                },
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(
+                    color: isUser
+                        ? Colors.white
+                        : (_isDark ? Colors.white : Colors.black87),
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                  a: TextStyle(
+                    color: isUser ? Colors.white : widget.themeColor,
+                    decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  code: TextStyle(
+                    backgroundColor: isUser
+                        ? Colors.white24
+                        : (_isDark
+                            ? Colors.grey.withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.1)),
+                    color: isUser
+                        ? Colors.white
+                        : (_isDark ? Colors.white : Colors.black87),
+                    fontFamily: 'monospace',
+                  ),
+                  codeblockDecoration: BoxDecoration(
+                    color: isUser
+                        ? Colors.white24
+                        : (_isDark
+                            ? Colors.grey.withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.1)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 6),
             Text(
               DateFormat('HH:mm').format(msg.createdAt),

@@ -12,7 +12,7 @@ abstract class VectorDeskChatTranslations {
 /// The default English translations for VectorDeskChatWidget.
 class VectorDeskChatDefaultTranslations implements VectorDeskChatTranslations {
   const VectorDeskChatDefaultTranslations();
-  
+
   @override
   String sendFailed(String error) => 'Send failed: $error';
 
