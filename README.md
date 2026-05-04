@@ -172,6 +172,14 @@ VectorDeskChatWidget(
 )
 ```
 
+### 4. Tool Integrations (e.g., Google Calendar)
+
+The `VectorDeskChatWidget` automatically supports any AI tools configured for your organization in the VectorDesk console.
+
+For example, if you have enabled the **Google Calendar** integration:
+- The AI can seamlessly query your schedule or create new calendar events during a chat session.
+- No additional frontend setup is required in your Flutter app; the widget natively handles tool execution states and renders the responses automatically.
+- To use this, simply ensure the Google Calendar tool is enabled for your Agent Persona and that the required Google Account authorization has been completed in the VectorDesk web console.
 
 ## Markdown Support
 
