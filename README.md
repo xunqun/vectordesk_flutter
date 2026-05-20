@@ -181,6 +181,53 @@ For example, if you have enabled the **Google Calendar** integration:
 - No additional frontend setup is required in your Flutter app; the widget natively handles tool execution states and renders the responses automatically.
 - To use this, simply ensure the Google Calendar tool is enabled for your Agent Persona and that the required Google Account authorization has been completed in the VectorDesk web console.
 
+#### Server-Side GCP Setup for Google Integrations
+
+To enable Google Calendar, Google Docs, and Google Sheets integrations, you must configure OAuth 2.0 credentials in the Google Cloud Console (GCP). Since the AI Agent backend manages the OAuth flow and tool execution, these steps are performed on the server side (Cloud Functions) rather than in the Flutter client.
+
+**1. Enable Required APIs**
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and select your Firebase project.
+2. Navigate to **APIs & Services > Library**.
+3. Search for and **Enable** the following APIs:
+   - `Google Calendar API`
+   - `Google Docs API`
+   - `Google Sheets API`
+
+**2. Configure OAuth Consent Screen**
+1. Go to **APIs & Services > OAuth consent screen**.
+2. Select **External** (or Internal if using a Workspace domain) and click Create.
+3. Fill in the App Information (App name, User support email).
+4. Add the following scopes: `.../auth/calendar`, `.../auth/documents`, `.../auth/spreadsheets`.
+5. Save and add your test Google accounts to the "Test users" list if the app is still in the "Testing" state.
+
+**3. Create OAuth 2.0 Client Credentials & Redirect URIs**
+You can use a single Web Client for all three integrations, or create three separate ones.
+1. Go to **APIs & Services > Credentials**.
+2. Click **CREATE CREDENTIALS > OAuth client ID**.
+3. Application type: **Web application**. Name it something like "AI Agent Google Tools Webhook".
+4. Under **Authorized redirect URIs**, add the following URLs (replace `<YOUR_PROJECT_ID>` with your Firebase project ID, e.g., `vectordesk-dev-6b1f0`):
+   - `https://asia-east1-<YOUR_PROJECT_ID>.cloudfunctions.net/calendarAuthCallback`
+   - `https://asia-east1-<YOUR_PROJECT_ID>.cloudfunctions.net/docsAuthCallback`
+   - `https://asia-east1-<YOUR_PROJECT_ID>.cloudfunctions.net/sheetsAuthCallback`
+5. Click **Create**.
+
+**4. Update Backend Environment Variables**
+Copy the generated Client ID and Client Secret, and set them in your backend `functions/.env.dev` and `functions/.env.prod` files:
+
+```env
+# Google Calendar
+GOOGLE_CALENDAR_CLIENT_ID="Your Client ID"
+GOOGLE_CALENDAR_CLIENT_SECRET="Your Client Secret"
+
+# Google Docs
+GOOGLE_DOCS_CLIENT_ID="Your Client ID"
+GOOGLE_DOCS_CLIENT_SECRET="Your Client Secret"
+
+# Google Sheets
+GOOGLE_SHEETS_CLIENT_ID="Your Client ID"
+GOOGLE_SHEETS_CLIENT_SECRET="Your Client Secret"
+```
+
 ## Markdown Support
 
 The chat widget automatically renders Markdown syntax in messages.
