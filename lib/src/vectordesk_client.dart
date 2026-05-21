@@ -69,41 +69,17 @@ class VectorDeskClient {
   Stream<List<VectorDeskMessage>> messagesStream() {
     if (_userId == null) return Stream.value([]);
 
-    // Query active chat for this user and org
-    // Note: This logic mimics the Web Widget's logic.
-    // For simplicity in this SDK preview, we might just list messages from a known chat ID
-    // or we need to find the chat ID first.
-
-    // In the real implementation, we need to find the chat doc first.
-    // Let's assume for now we look for the most recent active chat.
-
+    final chatId = 'guest_${orgId}_${_userId}';
     return _firestore!
         .collection('chats')
-        .where('orgId', isEqualTo: orgId)
-        .where('userId', isEqualTo: _userId)
-        .where('status', isEqualTo: 'active')
-        .orderBy('lastMessageAt', descending: true)
-        .limit(1)
+        .doc(chatId)
+        .collection('messages')
+        .orderBy('createdAt', descending: true)
         .snapshots()
-        .asyncMap((chatQuery) async {
-      if (chatQuery.docs.isEmpty) {
-        return [];
-      }
-      final chatId = chatQuery.docs.first.id;
-
-      // Better approach: Switch to streaming the messages subcollection of the found chat.
-      return _firestore!
-          .collection('chats')
-          .doc(chatId)
-          .collection('messages')
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => VectorDeskMessage.fromFirestore(doc))
-            .toList();
-      }).first; // This is tricky regarding stream transformation.
-      // For a robust SDK, we need a better state management.
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => VectorDeskMessage.fromFirestore(doc))
+          .toList();
     });
   }
 
@@ -112,27 +88,20 @@ class VectorDeskClient {
   Future<String> _getOrCreateChatId() async {
     if (_userId == null) throw Exception('Not initialized');
 
-    final q = await _firestore!
-        .collection('chats')
-        .where('orgId', isEqualTo: orgId)
-        .where('userId', isEqualTo: _userId)
-        .where('status', isEqualTo: 'active')
-        .orderBy('lastMessageAt', descending: true)
-        .limit(1)
-        .get();
+    final chatId = 'guest_${orgId}_${_userId}';
+    final docRef = _firestore!.collection('chats').doc(chatId);
+    final doc = await docRef.get();
 
-    if (q.docs.isNotEmpty) {
-      final doc = q.docs.first;
+    if (doc.exists) {
       // Update personaId if it has changed
-      if (personaId != null && doc.data()['personaId'] != personaId) {
-        await doc.reference.update({'personaId': personaId});
+      if (personaId != null && doc.data()?['personaId'] != personaId) {
+        await docRef.update({'personaId': personaId});
       }
-      return doc.id;
+      return chatId;
     }
 
     // Create new
-    final newChatId = 'guest_${const Uuid().v4()}';
-    await _firestore!.collection('chats').doc(newChatId).set({
+    await docRef.set({
       'orgId': orgId,
       'userId': _userId, // Kept for legacy/internal SDK use
       'externalUserId': _userId, // CRITICAL: Required by Chat model & RAG
@@ -145,7 +114,7 @@ class VectorDeskClient {
       'humanTakeover': false,
       if (personaId != null) 'personaId': personaId,
     });
-    return newChatId;
+    return chatId;
   }
 
   Stream<List<VectorDeskMessage>> get chatStream async* {
