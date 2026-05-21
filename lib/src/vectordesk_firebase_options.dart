@@ -33,29 +33,29 @@ class VectorDeskFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBu6xQuPNLN3tPitjPan_Pa0CRGVQu1Uqs',
-    appId: '1:139743525362:web:7903aba9d931403c76936b',
-    messagingSenderId: '139743525362',
+    apiKey: 'AIzaSyAqY6yCTAGQJcqeKN1OftMhZiBCOq6JYEQ',
+    appId: '1:334271256568:web:5f0c4d0e2c7680c420280d',
+    messagingSenderId: '334271256568',
     projectId: 'vectordesk-b445c',
     authDomain: 'vectordesk-b445c.firebaseapp.com',
     storageBucket: 'vectordesk-b445c.firebasestorage.app',
-    measurementId: 'G-D08SCKX953',
+    measurementId: 'G-S14ZBH41ES',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBsYNIJl9v0lj4l4N0OtOGGNeJv8YMVKGg',
-    appId: '1:139743525362:android:d4de0eaf098f68c276936b',
-    messagingSenderId: '139743525362',
+    apiKey: 'AIzaSyDPEyukDHkJThzcNwt4C6Mro4Bva4HEBGc',
+    appId: '1:334271256568:android:6367f6c4f836bfbf20280d',
+    messagingSenderId: '334271256568',
     projectId: 'vectordesk-b445c',
     storageBucket: 'vectordesk-b445c.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDYOyqTNTmDXZcAVWHAFUcyyJQiBBMQ2aE',
-    appId: '1:139743525362:ios:2cd70490dfcc957676936b',
-    messagingSenderId: '139743525362',
+    apiKey: 'AIzaSyDFZmuel7MMzKzgk9PRoy7K4bqyl5BZSYY',
+    appId: '1:334271256568:ios:e9d5fadfe638ca2920280d',
+    messagingSenderId: '334271256568',
     projectId: 'vectordesk-b445c',
     storageBucket: 'vectordesk-b445c.firebasestorage.app',
-    iosBundleId: 'app.whiles.aiagent.aiAgent',
+    iosBundleId: 'com.koso.vectordesk',
   );
 }

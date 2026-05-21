@@ -16,14 +16,20 @@ class VectorDeskClient {
 
   VectorDeskClient({required this.orgId, this.personaId});
 
-  Future<void> initialize({FirebaseOptions? options, String? appName}) async {
+  Future<void>? _initFuture;
+
+  Future<void> initialize({FirebaseOptions? options, String? appName}) {
+    _initFuture ??= _doInitialize(options: options, appName: appName);
+    return _initFuture!;
+  }
+
+  Future<void> _doInitialize({FirebaseOptions? options, String? appName}) async {
     // Default to embedded options if not provided
     final opts = options ?? VectorDeskFirebaseOptions.currentPlatform;
 
     // Check if there is already a default Firebase app initialized in the host app.
     // If not, we fall back to initializing the '[DEFAULT]' app to prevent [core/no-app] errors.
-    final hasDefaultApp = Firebase.apps.any((app) => app.name == '[DEFAULT]');
-    final name = appName ?? (hasDefaultApp ? 'vectordesk' : '[DEFAULT]');
+    final name = appName ?? '[DEFAULT]';
 
     try {
       if (name == '[DEFAULT]') {
@@ -42,6 +48,19 @@ class VectorDeskClient {
 
     _auth = FirebaseAuth.instanceFor(app: _app!);
     _firestore = FirebaseFirestore.instanceFor(app: _app!);
+
+    // Verify if the cached user is still valid on the Firebase server.
+    // If the user was deleted or disabled on the server, force refresh will throw,
+    // allowing us to sign out and obtain a new anonymous session.
+    if (_auth!.currentUser != null) {
+      try {
+        await _auth!.currentUser!.getIdToken(true);
+      } catch (e) {
+        try {
+          await _auth!.signOut();
+        } catch (_) {}
+      }
+    }
 
     // Anonymous Auth - Ensure we are using an anonymous session.
     // If the host app is logged in (e.g. via shared credentials), we might inherit
@@ -148,7 +167,14 @@ class VectorDeskClient {
     return newChatId;
   }
 
-  Stream<List<VectorDeskMessage>> get chatStream async* {
+  Stream<List<VectorDeskMessage>>? _chatStream;
+
+  Stream<List<VectorDeskMessage>> get chatStream {
+    _chatStream ??= _buildChatStream().asBroadcastStream();
+    return _chatStream!;
+  }
+
+  Stream<List<VectorDeskMessage>> _buildChatStream() async* {
     await initialize(); // Ensure initialized
     final chatId = await _getOrCreateChatId();
 

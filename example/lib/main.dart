@@ -27,8 +27,8 @@ class MyApp extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(title: const Text('VectorDesk SDK Example')),
         body: const VectorDeskChatWidget(
-          orgId: 'BKHmv6uGFlPoqPgOboa9',
-          personaId: 'gWF3A6hEPQt57WW185zn',
+          orgId: '0898pqYLJXexekO5q0qg',
+          personaId: '7PmkG0BOc6Vs8blEPNw1',
         ),
       ),
     );
