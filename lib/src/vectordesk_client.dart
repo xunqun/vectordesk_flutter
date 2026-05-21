@@ -17,17 +17,27 @@ class VectorDeskClient {
   VectorDeskClient({required this.orgId, this.personaId});
 
   Future<void> initialize({FirebaseOptions? options, String? appName}) async {
-    // Default to 'vectordesk' app name if not provided, to isolate from host app
-    final name = appName ?? 'vectordesk';
-
     // Default to embedded options if not provided
     final opts = options ?? VectorDeskFirebaseOptions.currentPlatform;
 
+    // Check if there is already a default Firebase app initialized in the host app.
+    // If not, we fall back to initializing the '[DEFAULT]' app to prevent [core/no-app] errors.
+    final hasDefaultApp = Firebase.apps.any((app) => app.name == '[DEFAULT]');
+    final name = appName ?? (hasDefaultApp ? 'vectordesk' : '[DEFAULT]');
+
     try {
-      _app = Firebase.app(name);
+      if (name == '[DEFAULT]') {
+        _app = Firebase.app();
+      } else {
+        _app = Firebase.app(name);
+      }
     } catch (e) {
       // App not initialized yet, initialize it
-      _app = await Firebase.initializeApp(name: name, options: opts);
+      if (name == '[DEFAULT]') {
+        _app = await Firebase.initializeApp(options: opts);
+      } else {
+        _app = await Firebase.initializeApp(name: name, options: opts);
+      }
     }
 
     _auth = FirebaseAuth.instanceFor(app: _app!);

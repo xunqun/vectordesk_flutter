@@ -15,13 +15,8 @@ class VectorDeskFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        // Fallback or specific MacOS config if available.
-        // For now, mirroring iOS config might work if bundle ID matches,
-        // but typically MacOS has its own app registration.
-        // If not supported, throw error.
-        throw UnsupportedError(
-          'DefaultFirebaseOptions are not supported for this platform.',
-        );
+        // Fallback to iOS configuration as it shares similar Firebase configurations for Apple platform.
+        return ios;
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',

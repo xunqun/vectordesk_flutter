@@ -14,7 +14,7 @@ A Flutter client SDK for integrating VectorDesk AI chat into your application.
 Add `vectordesk_flutter` to your `pubspec.yaml`:
 
 ```sh
-flutter pub add vectordesk_flutter --git-url=https://github.com/xunqun/vectordesk_flutter.git --git-ref=master
+flutter pub add vectordesk_flutter --git-url=https://github.com/xunqun/vectordesk_flutter.git --git-ref=koso
 ```
 
 ## Usage
