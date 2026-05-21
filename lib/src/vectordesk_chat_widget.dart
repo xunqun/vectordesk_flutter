@@ -44,6 +44,7 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
   StreamSubscription<List<VectorDeskMessage>>? _messagesSubscription;
   bool _isThinking = false;
   bool _initialized = false;
+  String? _initError;
 
   bool get _isDark =>
       (widget.brightness ?? Theme.of(context).brightness) == Brightness.dark;
@@ -85,28 +86,45 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
   }
 
   Future<void> _initClient() async {
-    // In a real app, options might be passed or default used
-    await _client.initialize(
-        options: widget.firebaseOptions, appName: widget.appName);
     if (mounted) {
       setState(() {
-        _initialized = true;
-        // Cancel previous subscription if any
-        _messagesSubscription?.cancel();
-        _messagesSubscription = _client.chatStream.listen((messages) {
-          if (mounted) {
-            setState(() {
-              // If we just received messages and the latest one is from the bot, stop thinking
-              if (messages.isNotEmpty) {
-                final latestMessage = messages.first;
-                if (latestMessage.sender != 'user') {
-                  _isThinking = false;
-                }
-              }
-            });
-          }
-        });
+        _initError = null;
+        _initialized = false;
       });
+    }
+
+    try {
+      // In a real app, options might be passed or default used
+      await _client.initialize(
+          options: widget.firebaseOptions, appName: widget.appName);
+      if (mounted) {
+        setState(() {
+          _initialized = true;
+          // Cancel previous subscription if any
+          _messagesSubscription?.cancel();
+          _messagesSubscription = _client.chatStream.listen((messages) {
+            if (mounted) {
+              setState(() {
+                // If we just received messages and the latest one is from the bot, stop thinking
+                if (messages.isNotEmpty) {
+                  final latestMessage = messages.first;
+                  if (latestMessage.sender != 'user') {
+                    _isThinking = false;
+                  }
+                }
+              });
+            }
+          });
+        });
+      }
+    } catch (e, stack) {
+      debugPrint('VectorDesk initialization error: $e\n$stack');
+      if (mounted) {
+        setState(() {
+          _initError = e.toString();
+          _initialized = false;
+        });
+      }
     }
   }
 
@@ -149,6 +167,35 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (_initError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                _l10n.errorMessage(_initError!),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _initClient,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.themeColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Retry / 重試'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (!_initialized) {
       return const Center(child: CircularProgressIndicator());
     }

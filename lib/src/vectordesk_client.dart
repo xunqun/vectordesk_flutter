@@ -27,9 +27,20 @@ class VectorDeskClient {
     // Default to embedded options if not provided
     final opts = options ?? VectorDeskFirebaseOptions.currentPlatform;
 
-    // Check if there is already a default Firebase app initialized in the host app.
-    // If not, we fall back to initializing the '[DEFAULT]' app to prevent [core/no-app] errors.
-    final name = appName ?? '[DEFAULT]';
+    // Check if the default Firebase app [DEFAULT] is already initialized.
+    bool defaultAppExists = false;
+    try {
+      Firebase.app(); // Throws if [DEFAULT] does not exist
+      defaultAppExists = true;
+    } catch (_) {
+      defaultAppExists = false;
+    }
+
+    // Determine the name of the app to use.
+    // If the caller specified an appName, use it.
+    // If not, and the default app doesn't exist, initialize [DEFAULT] so that native plugins work.
+    // If the default app already exists, use a separate name 'VectorDesk' to isolate our configs.
+    final name = appName ?? (defaultAppExists ? 'VectorDesk' : '[DEFAULT]');
 
     try {
       if (name == '[DEFAULT]') {
