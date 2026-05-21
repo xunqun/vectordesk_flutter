@@ -43,9 +43,14 @@ class VectorDeskClient {
     _auth = FirebaseAuth.instanceFor(app: _app!);
     _firestore = FirebaseFirestore.instanceFor(app: _app!);
 
-    // Anonymous Auth
-    if (_auth!.currentUser == null) {
+    // Anonymous Auth - Ensure we are using an anonymous session.
+    // If the host app is logged in (e.g. via shared credentials), we might inherit
+    // their authenticated session which lacks permissions for vectordesk.
+    if (_auth!.currentUser == null || !_auth!.currentUser!.isAnonymous) {
       try {
+        if (_auth!.currentUser != null) {
+          await _auth!.signOut();
+        }
         await _auth!.signInAnonymously();
       } on FirebaseAuthException catch (e) {
         if (e.code == 'admin-restricted-operation') {
