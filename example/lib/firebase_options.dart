@@ -16,9 +16,9 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyBu6xQuPNLN3tPitjPan_Pa0CRGVQu1Uqs',
     appId: '1:139743525362:web:7903aba9d931403c76936b',
     messagingSenderId: '139743525362',
-    projectId: 'ai-agent-1ce5e',
-    authDomain: 'ai-agent-1ce5e.firebaseapp.com',
-    storageBucket: 'ai-agent-1ce5e.firebasestorage.app',
+    projectId: 'vectordesk-b445c',
+    authDomain: 'vectordesk-b445c.firebaseapp.com',
+    storageBucket: 'vectordesk-b445c.firebasestorage.app',
     measurementId: 'G-D08SCKX953',
   );
 }
