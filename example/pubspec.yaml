@@ -10,9 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   vectordesk_flutter:
-    git:
-      url: https://github.com/xunqun/vectordesk_flutter.git
-      ref: koso
+    path: ../
   firebase_core: ^3.7.0
 
 dev_dependencies:

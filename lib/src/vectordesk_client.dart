@@ -16,26 +16,71 @@ class VectorDeskClient {
 
   VectorDeskClient({required this.orgId, this.personaId});
 
-  Future<void> initialize({FirebaseOptions? options, String? appName}) async {
-    // Default to 'vectordesk' app name if not provided, to isolate from host app
-    final name = appName ?? 'vectordesk';
+  Future<void>? _initFuture;
 
+  Future<void> initialize({FirebaseOptions? options, String? appName}) {
+    _initFuture ??= _doInitialize(options: options, appName: appName);
+    return _initFuture!;
+  }
+
+  Future<void> _doInitialize({FirebaseOptions? options, String? appName}) async {
     // Default to embedded options if not provided
     final opts = options ?? VectorDeskFirebaseOptions.currentPlatform;
 
+    // Check if the default Firebase app [DEFAULT] is already initialized.
+    bool defaultAppExists = false;
     try {
-      _app = Firebase.app(name);
+      Firebase.app(); // Throws if [DEFAULT] does not exist
+      defaultAppExists = true;
+    } catch (_) {
+      defaultAppExists = false;
+    }
+
+    // Determine the name of the app to use.
+    // If the caller specified an appName, use it.
+    // If not, and the default app doesn't exist, initialize [DEFAULT] so that native plugins work.
+    // If the default app already exists, use a separate name 'VectorDesk' to isolate our configs.
+    final name = appName ?? (defaultAppExists ? 'VectorDesk' : '[DEFAULT]');
+
+    try {
+      if (name == '[DEFAULT]') {
+        _app = Firebase.app();
+      } else {
+        _app = Firebase.app(name);
+      }
     } catch (e) {
       // App not initialized yet, initialize it
-      _app = await Firebase.initializeApp(name: name, options: opts);
+      if (name == '[DEFAULT]') {
+        _app = await Firebase.initializeApp(options: opts);
+      } else {
+        _app = await Firebase.initializeApp(name: name, options: opts);
+      }
     }
 
     _auth = FirebaseAuth.instanceFor(app: _app!);
     _firestore = FirebaseFirestore.instanceFor(app: _app!);
 
-    // Anonymous Auth
-    if (_auth!.currentUser == null) {
+    // Verify if the cached user is still valid on the Firebase server.
+    // If the user was deleted or disabled on the server, force refresh will throw,
+    // allowing us to sign out and obtain a new anonymous session.
+    if (_auth!.currentUser != null) {
       try {
+        await _auth!.currentUser!.getIdToken(true);
+      } catch (e) {
+        try {
+          await _auth!.signOut();
+        } catch (_) {}
+      }
+    }
+
+    // Anonymous Auth - Ensure we are using an anonymous session.
+    // If the host app is logged in (e.g. via shared credentials), we might inherit
+    // their authenticated session which lacks permissions for vectordesk.
+    if (_auth!.currentUser == null || !_auth!.currentUser!.isAnonymous) {
+      try {
+        if (_auth!.currentUser != null) {
+          await _auth!.signOut();
+        }
         await _auth!.signInAnonymously();
       } on FirebaseAuthException catch (e) {
         if (e.code == 'admin-restricted-operation') {
@@ -133,7 +178,14 @@ class VectorDeskClient {
     return newChatId;
   }
 
-  Stream<List<VectorDeskMessage>> get chatStream async* {
+  Stream<List<VectorDeskMessage>>? _chatStream;
+
+  Stream<List<VectorDeskMessage>> get chatStream {
+    _chatStream ??= _buildChatStream().asBroadcastStream();
+    return _chatStream!;
+  }
+
+  Stream<List<VectorDeskMessage>> _buildChatStream() async* {
     await initialize(); // Ensure initialized
     final chatId = await _getOrCreateChatId();
 
