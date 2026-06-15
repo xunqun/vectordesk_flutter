@@ -443,7 +443,40 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               ),
             if (msg.text.isNotEmpty && msg.text != '[圖片訊息]')
               MarkdownBody(
-                data: msg.text,
+                data: msg.text.replaceAllMapped(
+                  RegExp(r'\[IMAGE:\s*(https?:\/\/[^\]]+)\]', caseSensitive: false),
+                  (match) => '![image](${match.group(1)})',
+                ),
+                // ignore: deprecated_member_use
+                imageBuilder: (uri, title, alt) {
+                  final imageUrl = uri.toString();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: GestureDetector(
+                      onTap: () => _openFullscreenImage(context, imageUrl),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Center(child: Icon(Icons.error)),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
                 selectable: true,
                 onTapLink: (text, href, title) async {
                   if (href != null && await canLaunchUrlString(href)) {
