@@ -19,6 +19,7 @@ class VectorDeskChatWidget extends StatefulWidget {
   final String? appName;
   final Brightness? brightness;
   final VectorDeskChatTranslations? translations;
+  final VectorDeskClient? client;
 
   const VectorDeskChatWidget({
     super.key,
@@ -31,14 +32,17 @@ class VectorDeskChatWidget extends StatefulWidget {
     this.appName,
     this.brightness,
     this.translations,
+    this.client,
   });
 
   @override
   State<VectorDeskChatWidget> createState() => _VectorDeskChatWidgetState();
 }
 
-class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
-  late final VectorDeskClient _client;
+class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget>
+    with WidgetsBindingObserver {
+  late VectorDeskClient _client;
+  late Stream<List<VectorDeskMessage>> _chatMessagesStream;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   StreamSubscription<List<VectorDeskMessage>>? _messagesSubscription;
@@ -55,30 +59,50 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
   @override
   void initState() {
     super.initState();
-    _client = VectorDeskClient(
-      orgId: widget.orgId,
-      personaId: widget.personaId,
-    );
+    WidgetsBinding.instance.addObserver(this);
+    _client = widget.client ??
+        VectorDeskClient.getInstance(
+          orgId: widget.orgId,
+          personaId: widget.personaId,
+        );
+    _chatMessagesStream = _client.chatStream;
     _initClient();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _client.setChatActive(true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _client.setChatActive(false);
+    }
   }
 
   @override
   void didUpdateWidget(covariant VectorDeskChatWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.orgId != widget.orgId ||
+    if (oldWidget.client != widget.client ||
+        oldWidget.orgId != widget.orgId ||
         oldWidget.personaId != widget.personaId ||
         oldWidget.firebaseOptions != widget.firebaseOptions ||
         oldWidget.appName != widget.appName) {
-      _client = VectorDeskClient(
-        orgId: widget.orgId,
-        personaId: widget.personaId,
-      );
+      _client.setChatActive(false);
+      _client = widget.client ??
+          VectorDeskClient.getInstance(
+            orgId: widget.orgId,
+            personaId: widget.personaId,
+          );
+      _chatMessagesStream = _client.chatStream;
       _initClient();
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _client.setChatActive(false);
     _messagesSubscription?.cancel();
     _controller.dispose();
     _scrollController.dispose();
@@ -94,15 +118,23 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
     }
 
     try {
-      // In a real app, options might be passed or default used
       await _client.initialize(
           options: widget.firebaseOptions, appName: widget.appName);
+      _client.setChatActive(true);
+    } catch (e, stack) {
+      debugPrint('VectorDesk initialize error: $e\n$stack');
+      if (mounted) {
+        setState(() {
+          _initError = e.toString();
+        });
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _initialized = true;
           // Cancel previous subscription if any
           _messagesSubscription?.cancel();
-          _messagesSubscription = _client.chatStream.listen((messages) {
+          _messagesSubscription = _chatMessagesStream.listen((messages) {
             if (mounted) {
               setState(() {
                 // If we just received messages and the latest one is from the bot, stop thinking
@@ -115,14 +147,6 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
               });
             }
           });
-        });
-      }
-    } catch (e, stack) {
-      debugPrint('VectorDesk initialization error: $e\n$stack');
-      if (mounted) {
-        setState(() {
-          _initError = e.toString();
-          _initialized = false;
         });
       }
     }
@@ -204,7 +228,8 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget> {
       children: [
         Expanded(
           child: StreamBuilder<List<VectorDeskMessage>>(
-            stream: _client.chatStream, // Use _client.chatStream directly
+            stream: _chatMessagesStream,
+            initialData: _client.currentMessages,
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Center(
