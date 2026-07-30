@@ -234,7 +234,7 @@ The chat widget automatically renders Markdown syntax in messages.
 
 -   **Bold**: `**text**`
 -   *Italic*: `*text*`
--   [Links](https://vectordesk.ai)
+-   [Links](https://orangeai.tw)
 -   Lists
 -   `Code Blocks`
 
@@ -246,3 +246,145 @@ The chat widget automatically renders Markdown syntax in messages.
 ## License
 
 MIT
+
+---
+
+## Channel Integration: Facebook for Business
+
+This section documents the complete setup process for connecting a **Facebook Business Messenger** channel to VectorDesk, using **Facebook Login for Business** (Business Manager OAuth).
+
+This flow differs from the standard Facebook OAuth — it is designed for businesses managing Pages via Meta Business Manager, using a `config_id` instead of OAuth scopes.
+
+> ⚠️ **Critical gotcha**: A Meta App connected to a Business Manager account will **NOT deliver Messenger webhook events in Development Mode**, even for app administrators. You must switch the Meta App to **Live Mode** before webhooks work.
+
+---
+
+### Prerequisites
+
+- A **Meta Business Manager** account with admin access
+- One or more **Facebook Pages** managed under that Business Manager
+- A **Meta Developer App** of type "Business" (create at [developers.facebook.com](https://developers.facebook.com))
+- Access to the VectorDesk web console (admin or owner role)
+
+---
+
+### Step 1 — Create and Configure the Meta App
+
+1. Go to [Meta for Developers](https://developers.facebook.com) → **My Apps → Create App**
+2. Select app type: **Business**
+3. Under **Use Cases**, add:
+   - **Messenger from Meta** (for Facebook Messenger)
+   - **Manage Instagram messages and content** (for Instagram, optional)
+4. Under **App Settings → Basic**, fill in:
+   - App domain (e.g., `orangeai.tw`)
+   - Privacy Policy URL
+   - App icon
+5. Note your **App ID** and **App Secret**
+
+---
+
+### Step 2 — Set Up Facebook Login for Business
+
+1. Navigate to **商家專用 Facebook 登入 (Facebook Login for Business)** in the left menu
+2. Create a **configuration** — this generates a `config_id`
+3. Set the **OAuth redirect URI** to your backend callback URL:
+   ```
+   https://{region}-{project}.cloudfunctions.net/facebookBusinessOauthCallback
+   ```
+4. Note the `config_id` — it replaces the `scope` parameter in the standard OAuth URL
+
+---
+
+### Step 3 — Configure Webhooks
+
+#### Facebook Messenger Webhook
+Navigate to **Messenger from Meta → Messenger API 設定 → Step 1 Webhooks**:
+
+| Field | Value |
+|-------|-------|
+| Callback URL | `https://{region}-{project}.cloudfunctions.net/facebookBusinessOauthWebhook` |
+| Verify Token | Your `META_WEBHOOK_VERIFY_TOKEN` value |
+| Subscribed Fields | `messages`, `messaging_postbacks` |
+
+#### Instagram Webhook (optional)
+Navigate to **Messenger from Meta → Instagram 設定 → Webhooks**:
+
+| Field | Value |
+|-------|-------|
+| Callback URL | `https://{region}-{project}.cloudfunctions.net/instagramBusinessOauthWebhook` |
+| Verify Token | Same `META_WEBHOOK_VERIFY_TOKEN` value |
+| Subscribed Fields | `messages`, `messaging_postbacks` |
+
+---
+
+### Step 4 — Request Permissions
+
+Under **Messenger from Meta → 權限和功能 (Permissions and Features)**, ensure the following permissions are enabled:
+
+| Permission | Purpose |
+|-----------|---------|
+| `public_profile` | Identify the authorizing user during OAuth |
+| `business_management` | Access Business Manager and enumerate owned Pages |
+| `pages_show_list` | Display Page list for the admin to select during binding |
+| `pages_manage_metadata` | Subscribe the selected Page to Messenger webhooks |
+| `pages_messaging` | Receive and reply to Messenger conversations |
+
+For Instagram, additionally request:
+| Permission | Purpose |
+|-----------|---------|
+| `instagram_basic` | Read Instagram Business account ID and username |
+| `instagram_manage_messages` | Receive and send Instagram Direct Messages |
+
+---
+
+### Step 5 — Switch App to Live Mode (Critical!)
+
+> ❌ **Do NOT skip this step.** Webhook events are silently dropped in Development Mode for Business Manager apps.
+
+1. In the Meta App Dashboard, go to **發佈 (Publish)** in the left navigation
+2. Confirm all required settings are complete
+3. Click **發佈 (Publish)** to switch the app to **Live Mode**
+
+**Why this is required**: Unlike standard Facebook Apps where Development Mode only restricts which users can interact, apps connected to a Business Manager account have an additional restriction — Meta does not deliver Messenger webhook POST events at all while in Development Mode, regardless of the user's app role (admin/developer/tester). The UI may show "success" when testing, but no events reach the server until Live Mode is enabled.
+
+---
+
+### Step 6 — Connect Facebook Channel in VectorDesk
+
+1. Log in to the VectorDesk web console
+2. Navigate to your Organization **Settings → Channels**
+3. Click **Add Channel → Facebook Business**
+4. Click **Connect with Facebook Business Login**
+5. Complete the Meta Business Login OAuth flow:
+   - Authorize the app with your Business Manager account
+   - Select the Facebook Page to connect
+6. After successful authorization, the channel appears as **Active** in your channel list
+
+The OAuth flow calls:
+- `/{user_id}/businesses` → lists your Business Manager accounts
+- `/{business_id}/owned_pages` → lists Pages managed by the Business
+- `POST /{page_id}/subscribed_apps` → subscribes the Page to webhook events
+
+---
+
+### Step 7 — Verify End-to-End
+
+1. Send a test message to the connected Facebook Page via Messenger
+2. The message should appear in the VectorDesk **Inbox** within a few seconds
+3. Verify in GCP Cloud Logging that `facebookBusinessOauthWebhook` received a `POST` request
+
+If messages are not appearing, check:
+- ✅ App is in **Live Mode** (not Development Mode)
+- ✅ Webhook URL is verified and subscribed to `messages` field
+- ✅ The Page is subscribed to the Business App (`/{pageId}/subscribed_apps`)
+- ✅ Firestore Collection Group index for `config.pageId` is deployed
+
+---
+
+### App Review
+
+For **Standard Access** (responding to users who initiate conversation), no App Review is required. For **Advanced Access** (proactively messaging users), submit for review with:
+
+- Written description for each permission (see VectorDesk internal docs for templates)
+- Screen recording demonstrating the complete authorization and messaging flow
+

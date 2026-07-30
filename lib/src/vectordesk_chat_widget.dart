@@ -110,11 +110,34 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget>
   }
 
   Future<void> _initClient() async {
-    if (mounted) {
-      setState(() {
-        _initError = null;
-        _initialized = false;
-      });
+
+    try {
+      await _client.initialize(
+          options: widget.firebaseOptions, appName: widget.appName);
+      _client.setChatActive(true);
+    } catch (e, stack) {
+      debugPrint('VectorDesk initialize error: $e\n$stack');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _initialized = true;
+          // Cancel previous subscription if any
+          _messagesSubscription?.cancel();
+          _messagesSubscription = _chatMessagesStream.listen((messages) {
+            if (mounted) {
+              setState(() {
+                // If we just received messages and the latest one is from the bot, stop thinking
+                if (messages.isNotEmpty) {
+                  final latestMessage = messages.first;
+                  if (latestMessage.sender != 'user') {
+                    _isThinking = false;
+                  }
+                }
+              });
+            }
+          });
+        });
+      }
     }
 
     try {
