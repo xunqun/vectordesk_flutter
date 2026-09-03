@@ -426,10 +426,15 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget>
               ),
             if (msg.text.isNotEmpty && msg.text != '[圖片訊息]')
               MarkdownBody(
-                data: msg.text.replaceAllMapped(
-                  RegExp(r'\[IMAGE:\s*(https?:\/\/[^\]]+)\]', caseSensitive: false),
-                  (match) => '![image](${match.group(1)})',
-                ),
+                data: msg.text
+                    .replaceAllMapped(
+                      RegExp(r'\[IMAGE:\s*(https?:\/\/[^\]]+)\]', caseSensitive: false),
+                      (match) => '![image](${match.group(1)})',
+                    )
+                    .replaceAllMapped(
+                      RegExp(r'([^\n])\r?\n\s*(-{3,}|={3,}|\*{3,})\s*(?:\r?\n|$)'),
+                      (match) => '${match.group(1)}\n\n${match.group(2)}\n\n',
+                    ),
                 // ignore: deprecated_member_use
                 imageBuilder: (uri, title, alt) {
                   final imageUrl = uri.toString();
@@ -477,6 +482,37 @@ class _VectorDeskChatWidgetState extends State<VectorDeskChatWidget>
                         : (_isDark ? Colors.white : Colors.black87),
                     fontSize: 15,
                     height: 1.4,
+                  ),
+                  h1: TextStyle(
+                    color: isUser
+                        ? Colors.white
+                        : (_isDark ? Colors.white : Colors.black87),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  h2: TextStyle(
+                    color: isUser
+                        ? Colors.white
+                        : (_isDark ? Colors.white : Colors.black87),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  h3: TextStyle(
+                    color: isUser
+                        ? Colors.white
+                        : (_isDark ? Colors.white : Colors.black87),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  horizontalRuleDecoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: isUser
+                            ? Colors.white30
+                            : (_isDark ? Colors.white24 : Colors.black12),
+                        width: 1,
+                      ),
+                    ),
                   ),
                   a: TextStyle(
                     color: isUser ? Colors.white : widget.themeColor,
