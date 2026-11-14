@@ -10,8 +10,8 @@ this version and republish your app.
     no longer queries the conversation list.
 *   New conversations no longer carry a `userId` field.
 *   The SDK writes only the end user's messages plus the conversation's
-    `lastMessageAt`, `status` (set back to `active`) and `personaId`. Agent replies and conversation state are
-    written by the server.
+    `lastMessageAt`, `status` (set back to `active`) and `personaId`. Agent
+    replies and conversation state are written by the server.
 *   **Behavior change:** conversations created by earlier SDK versions are not
     visible in this version. Users start a new conversation after upgrading.
 *   **Behavior change:** the conversation is reused and is reopened (status set
