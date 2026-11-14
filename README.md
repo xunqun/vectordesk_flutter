@@ -17,6 +17,26 @@ Add `vectordesk_flutter` to your `pubspec.yaml`:
 flutter pub add vectordesk_flutter --git-url=https://github.com/xunqun/vectordesk_flutter.git --git-ref=master
 ```
 
+## Upgrading to 2.0.0
+
+Version 2.0.0 updates the SDK's backend protocol for compatibility with
+tightened security rules. **Earlier versions no longer work** against the
+VectorDesk backend, so every app that embeds this SDK must upgrade:
+
+1.  Update the dependency to `2.0.0` or later (for example by re-running the
+    `flutter pub add` command above, or `flutter pub upgrade vectordesk_flutter`).
+2.  Rebuild your app and republish it to the App Store / Google Play. Users keep
+    getting errors until they install the updated app.
+
+No code changes are needed; the `VectorDeskChatWidget` and `VectorDeskClient`
+APIs are unchanged.
+
+What changes for your users:
+
+-   Each anonymous user has exactly one conversation per organization.
+-   Conversations started with an earlier SDK version are **not visible** after
+    the upgrade; users start a new conversation.
+
 ## Usage
 
 ### 1. Initialize Firebase

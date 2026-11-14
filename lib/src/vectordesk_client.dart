@@ -2,9 +2,10 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'models.dart';
 import 'vectordesk_firebase_options.dart';
+import 'vectordesk_protocol.dart';
 
 class VectorDeskClient {
   final String orgId;
@@ -18,7 +19,8 @@ class VectorDeskClient {
   static VectorDeskClient? _instance;
 
   /// Get or initialize shared singleton instance for convenience.
-  static VectorDeskClient getInstance({required String orgId, String? personaId}) {
+  static VectorDeskClient getInstance(
+      {required String orgId, String? personaId}) {
     if (_instance != null &&
         (_instance!.orgId != orgId || _instance!.personaId != personaId)) {
       _instance!.dispose();
@@ -29,6 +31,19 @@ class VectorDeskClient {
   }
 
   VectorDeskClient({required this.orgId, this.personaId});
+
+  /// Creates a client that uses [firestore] and an already signed-in anonymous
+  /// [userId] instead of initializing Firebase. For tests only.
+  @visibleForTesting
+  VectorDeskClient.forTesting({
+    required this.orgId,
+    this.personaId,
+    required FirebaseFirestore firestore,
+    required String userId,
+  })  : _firestore = firestore,
+        _userId = userId {
+    _initFuture = Future<void>.value();
+  }
 
   Future<void>? _initFuture;
 
@@ -62,7 +77,8 @@ class VectorDeskClient {
     return _initFuture!;
   }
 
-  Future<void> _doInitialize({FirebaseOptions? options, String? appName}) async {
+  Future<void> _doInitialize(
+      {FirebaseOptions? options, String? appName}) async {
     // Default to embedded options if not provided
     final opts = options ?? VectorDeskFirebaseOptions.currentPlatform;
 
@@ -140,62 +156,71 @@ class VectorDeskClient {
     _unreadCountController.add(0);
   }
 
-  Future<String> _getOrCreateChatId() async {
-    if (_userId == null) throw Exception('Not initialized');
+  Future<String>? _chatIdFuture;
 
-    final q = await _firestore!
-        .collection('chats')
-        .where('orgId', isEqualTo: orgId)
-        .where('userId', isEqualTo: _userId)
-        .where('status', isEqualTo: 'active')
-        .get();
+  /// Resolves this user's conversation, creating it when absent.
+  ///
+  /// Concurrent callers share one in-flight lookup so the conversation is
+  /// created at most once; a failed lookup is retried on the next call.
+  Future<String> _getOrCreateChatId() {
+    final future = _chatIdFuture ??= _resolveChatId();
+    future.then<void>((_) {}, onError: (Object _) {
+      if (identical(_chatIdFuture, future)) _chatIdFuture = null;
+    });
+    return future;
+  }
 
-    if (q.docs.isNotEmpty) {
-      final docs = q.docs.toList();
-      docs.sort((a, b) {
-        final aTime = (a.data()['lastMessageAt'] as Timestamp?)?.toDate() ??
-            DateTime.fromMillisecondsSinceEpoch(0);
-        final bTime = (b.data()['lastMessageAt'] as Timestamp?)?.toDate() ??
-            DateTime.fromMillisecondsSinceEpoch(0);
-        return bTime.compareTo(aTime);
-      });
-      final doc = docs.first;
-      if (personaId != null && doc.data()['personaId'] != personaId) {
-        await doc.reference.update({'personaId': personaId});
-      }
-      return doc.id;
+  Future<String> _resolveChatId() async {
+    final uid = _userId;
+    if (uid == null || _firestore == null) throw Exception('Not initialized');
+
+    final id = VectorDeskProtocol.guestChatId(uid: uid, orgId: orgId);
+    final ref =
+        _firestore!.collection(VectorDeskProtocol.chatsCollection).doc(id);
+
+    final snapshot = await ref.get();
+    if (snapshot.exists) {
+      await _syncPersona(ref, snapshot.data());
+      return id;
     }
 
-    final newChatId = 'guest_${const Uuid().v4()}';
-    await _firestore!.collection('chats').doc(newChatId).set({
-      'orgId': orgId,
-      'userId': _userId,
-      'externalUserId': _userId,
-      'status': 'active',
-      'channel': 'flutter_app',
-      'integrationId': 'flutter_app',
-      'createdAt': FieldValue.serverTimestamp(),
-      'lastMessageAt': FieldValue.serverTimestamp(),
-      'unreadCount': 0,
-      'humanTakeover': false,
-      if (personaId != null) 'personaId': personaId,
-    });
-    return newChatId;
+    try {
+      await ref.set(VectorDeskProtocol.newChatData(
+        orgId: orgId,
+        uid: uid,
+        personaId: personaId,
+      ));
+    } on FirebaseException {
+      // The conversation may have been created by another session of the same
+      // user in the meantime; use it if so.
+      final retry = await ref.get();
+      if (!retry.exists) rethrow;
+      await _syncPersona(ref, retry.data());
+    }
+    return id;
+  }
+
+  Future<void> _syncPersona(
+      DocumentReference<Map<String, dynamic>> ref, Map<String, dynamic>? data) {
+    final persona = personaId;
+    if (persona == null || data?['personaId'] == persona) {
+      return Future<void>.value();
+    }
+    return ref.update(VectorDeskProtocol.personaUpdate(persona));
   }
 
   void _setupMessageListener(String chatId) {
     if (_firestoreSub != null) return;
 
     _firestoreSub = _firestore!
-        .collection('chats')
+        .collection(VectorDeskProtocol.chatsCollection)
         .doc(chatId)
-        .collection('messages')
+        .collection(VectorDeskProtocol.messagesCollection)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
-      final messages = snapshot.docs
-          .map((d) => VectorDeskMessage.fromFirestore(d))
-          .toList();
+      final messages =
+          snapshot.docs.map((d) => VectorDeskMessage.fromFirestore(d)).toList();
 
       _currentMessages = messages;
       _hasLoadedInitialMessages = true;
@@ -271,31 +296,34 @@ class VectorDeskClient {
     return controller.stream;
   }
 
+  /// Sends [text] as a user message in this user's conversation, creating the
+  /// conversation first if needed. Text longer than
+  /// [VectorDeskProtocol.maxMessageLength] characters is truncated.
   Future<void> sendMessage(String text) async {
-    if (text.length > 2050) {
+    if (text.length > VectorDeskProtocol.maxMessageLength) {
       // ignore: avoid_print
       print('[VectorDeskClient] Truncating overly long message');
-      text = text.substring(0, 2050);
     }
     final chatId = await _getOrCreateChatId();
-    await _firestore!
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add({
-      'content': text,
-      'senderType': 'user',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    await _firestore!.collection('chats').doc(chatId).update({
-      'lastMessageAt': FieldValue.serverTimestamp(),
-    });
+    final chatRef =
+        _firestore!.collection(VectorDeskProtocol.chatsCollection).doc(chatId);
+    try {
+      await chatRef
+          .collection(VectorDeskProtocol.messagesCollection)
+          .add(VectorDeskProtocol.userMessageData(text));
+      await chatRef.update(VectorDeskProtocol.lastMessageUpdate());
+    } on FirebaseException {
+      // Look the conversation up again on the next attempt, in case it was
+      // removed on the server.
+      _chatIdFuture = null;
+      rethrow;
+    }
   }
 
   void dispose() {
     _firestoreSub?.cancel();
     _firestoreSub = null;
+    _chatIdFuture = null;
     _unreadCountController.close();
     _newMessageController.close();
     _messagesController?.close();
@@ -307,4 +335,3 @@ class VectorDeskClient {
     }
   }
 }
-
