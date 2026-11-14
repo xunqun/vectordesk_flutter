@@ -1,3 +1,7 @@
+// The field sets asserted here mirror the backend's security-rule contract
+// for guest conversations. The authoritative rules compatibility tests live in
+// the backend repository, not here.
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vectordesk_flutter/src/vectordesk_protocol.dart';
@@ -92,8 +96,11 @@ void main() {
     });
   });
 
-  test('conversation updates touch only their own field', () {
-    expect(VectorDeskProtocol.lastMessageUpdate().keys, ['lastMessageAt']);
+  test('conversation updates touch only their own fields', () {
+    final update = VectorDeskProtocol.lastMessageUpdate();
+    expect(update.keys.toSet(), {'lastMessageAt', 'status'});
+    expect(update['lastMessageAt'], isA<FieldValue>());
+    expect(update['status'], 'active');
     expect(VectorDeskProtocol.personaUpdate('p2'), {'personaId': 'p2'});
   });
 }

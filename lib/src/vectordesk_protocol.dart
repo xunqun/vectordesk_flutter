@@ -77,7 +77,12 @@ class VectorDeskProtocol {
   }
 
   /// Update sent on the conversation after a user message is written.
+  ///
+  /// Also reopens the conversation if it was closed or archived.
   static Map<String, Object> lastMessageUpdate() {
-    return {'lastMessageAt': FieldValue.serverTimestamp()};
+    return {
+      'lastMessageAt': FieldValue.serverTimestamp(),
+      'status': 'active',
+    };
   }
 }

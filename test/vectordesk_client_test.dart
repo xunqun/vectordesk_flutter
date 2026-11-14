@@ -24,10 +24,6 @@ void main() {
   Future<Map<String, dynamic>?> chatData() async =>
       (await firestore.collection('chats').doc(_chatId).get()).data();
 
-  test('chatId is derived from the anonymous uid and orgId', () {
-    expect(client().chatId, _chatId);
-  });
-
   test('sendMessage creates the conversation at its fixed id when absent',
       () async {
     await client(personaId: 'p1').sendMessage('hi');
@@ -96,6 +92,35 @@ void main() {
     expect(data['summary'], 'written by the server');
     expect(data['lastMessageAt'], isA<Timestamp>());
     expect(data.containsKey('createdAt'), isFalse);
+  });
+
+  test('sending to a closed conversation reopens it', () async {
+    await firestore.collection('chats').doc(_chatId).set({
+      'orgId': _orgId,
+      'externalUserId': _uid,
+      'status': 'closed',
+      'channel': 'flutter_app',
+      'integrationId': 'flutter_app',
+      'unreadCount': 2,
+      'humanTakeover': true,
+      'summary': 'written by the server',
+    });
+
+    await client().sendMessage('are you there?');
+
+    final data = (await chatData())!;
+    expect(data['status'], 'active');
+    expect(data['lastMessageAt'], isA<Timestamp>());
+    expect(data['unreadCount'], 2);
+    expect(data['humanTakeover'], true);
+    expect(data['summary'], 'written by the server');
+    expect(data['channel'], 'flutter_app');
+    final messages = await firestore
+        .collection('chats')
+        .doc(_chatId)
+        .collection('messages')
+        .get();
+    expect(messages.docs.single.data()['content'], 'are you there?');
   });
 
   test('a different personaId updates only personaId', () async {

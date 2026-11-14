@@ -156,14 +156,6 @@ class VectorDeskClient {
     _unreadCountController.add(0);
   }
 
-  /// The id of this user's conversation in [orgId], once initialized.
-  ///
-  /// The SDK keeps exactly one conversation per anonymous user and
-  /// organization; see [VectorDeskProtocol.guestChatId].
-  String? get chatId => _userId == null
-      ? null
-      : VectorDeskProtocol.guestChatId(uid: _userId!, orgId: orgId);
-
   Future<String>? _chatIdFuture;
 
   /// Resolves this user's conversation, creating it when absent.
